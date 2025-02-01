@@ -2,6 +2,7 @@ package timescaledb
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/jackc/pgx/v5"
@@ -42,8 +43,29 @@ func (d *TimeScaleDBDriver) Init() error {
 	return nil
 }
 
-func (d *TimeScaleDBDriver) Send(key, data []byte) error { return nil }
-func (d *TimeScaleDBDriver) Errors() <-chan error        { return d.errors }
+func (d *TimeScaleDBDriver) Send(key, data []byte) error {
+	queryInsertMetaData := `INSERT INTO flow_raw (time_received, sequence_num, sampler_address, time_flow_start, 
+												  	time_flow_end, bytes, packets, src_addr, dst_addr, src_net, etype, 
+												  	proto, src_port, dst_port, in_if, out_if, ip_tos, forwarding_status, 
+													tcp_flags, dst_net) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 
+													$11, $12, $13, $14, $15, $16, $17, $18, $19, $20)`
+	var timescaleData map[string]interface{}
+	if err := json.Unmarshal(data, &timescaleData); err != nil {
+		log.Fatal(err)
+	}
+	ctx := context.Background()
+	_, err := d.conn.Exec(ctx, queryInsertMetaData, timescaleData["time_received"], timescaleData["sequence_num"],
+		timescaleData["sampler_address"], timescaleData["time_flow_start"], timescaleData["time_flow_end"],
+		timescaleData["bytes"], timescaleData["packets"], timescaleData["src_addr"], timescaleData["dst_addr"],
+		timescaleData["src_net"], timescaleData["etype"], timescaleData["proto"], timescaleData["src_port"],
+		timescaleData["dst_port"], timescaleData["in_if"], timescaleData["out_if"], timescaleData["ip_tos"],
+		timescaleData["forwarding_status"], timescaleData["tcp_flags"], timescaleData["dst_net"])
+	if err != nil {
+		log.Fatal(err)
+	}
+	return nil
+}
+func (d *TimeScaleDBDriver) Errors() <-chan error { return d.errors }
 
 func (d *TimeScaleDBDriver) Close() error {
 	ctx := context.Background()
