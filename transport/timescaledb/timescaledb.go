@@ -49,10 +49,12 @@ func (d *TimeScaleDBDriver) Send(key, data []byte) error {
 												  	proto, src_port, dst_port, in_if, out_if, ip_tos, forwarding_status, 
 													tcp_flags, dst_net) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 
 													$11, $12, $13, $14, $15, $16, $17, $18, $19, $20)`
+	log.Print(data)
 	var timescaleData map[string]interface{}
 	if err := json.Unmarshal(data, &timescaleData); err != nil {
 		log.Fatal(err)
 	}
+	log.Print(timescaleData)
 	ctx := context.Background()
 	_, err := d.conn.Exec(ctx, queryInsertMetaData, timescaleData["time_received"], timescaleData["sequence_num"],
 		timescaleData["sampler_address"], timescaleData["time_flow_start"], timescaleData["time_flow_end"],
