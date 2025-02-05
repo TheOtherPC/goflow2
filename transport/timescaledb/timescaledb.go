@@ -58,9 +58,9 @@ func (d *TimeScaleDBDriver) Send(key, data []byte) error {
 	log.Print(timescaleData)
 	time.Unix(0, int64(timescaleData["time_received"].(float64)))
 	ctx := context.Background()
-	_, err := d.conn.Exec(ctx, queryInsertMetaData, time.Unix(0, int64(timescaleData["time_received_ns"].(float64))), timescaleData["sequence_num"],
-		timescaleData["sampler_address"], time.Unix(0, int64(timescaleData["time_flow_start_ns"].(float64))),
-		time.Unix(0, int64(timescaleData["time_flow_start_ns"].(float64))),
+	_, err := d.conn.Exec(ctx, queryInsertMetaData, time.Unix(0, int64(timescaleData["time_received_ns"].(float64))).UTC(), timescaleData["sequence_num"],
+		timescaleData["sampler_address"], time.Unix(0, int64(timescaleData["time_flow_start_ns"].(float64))).UTC(),
+		time.Unix(0, int64(timescaleData["time_flow_start_ns"].(float64))).UTC(),
 		timescaleData["bytes"], timescaleData["packets"], timescaleData["src_addr"], timescaleData["dst_addr"],
 		timescaleData["src_net"], timescaleData["etype"], timescaleData["proto"], timescaleData["src_port"],
 		timescaleData["dst_port"], timescaleData["in_if"], timescaleData["out_if"], timescaleData["ip_tos"],
