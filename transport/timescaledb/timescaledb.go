@@ -58,6 +58,7 @@ func (d *TimeScaleDBDriver) Send(key, data []byte) error {
 	if err := json.Unmarshal(data, &timescaleData); err != nil {
 		log.Fatal(err)
 	}
+	log.Print(timescaleData)
 	ctx := context.Background()
 	/*
 		_, err := d.conn.Exec(ctx, queryInsertMetaData, time.Unix(0, int64(timescaleData["time_received_ns"].(float64))).UTC(), timescaleData["sequence_num"],
