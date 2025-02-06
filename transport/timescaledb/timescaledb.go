@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/netsampler/goflow2/v2/transport"
 	"log"
 	"time"
@@ -19,6 +20,7 @@ type TimeScaleDBDriver struct {
 	dbname   string
 
 	conn *pgx.Conn
+	pool *pgxpool.Pool
 
 	errors chan error
 }
@@ -36,7 +38,8 @@ func (d *TimeScaleDBDriver) Init() error {
 	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", d.username, d.password, d.url, d.port, d.dbname)
 	ctx := context.Background()
 	var err error
-	d.conn, err = pgx.Connect(ctx, connStr)
+	d.pool, err = pgxpool.New(ctx, connStr)
+	//d.conn, err = pgx.Connect(ctx, connStr)
 	if err != nil {
 		log.Fatalf("Unable to connect to TimeScaleDB: %v", err)
 		return err
@@ -55,9 +58,17 @@ func (d *TimeScaleDBDriver) Send(key, data []byte) error {
 	if err := json.Unmarshal(data, &timescaleData); err != nil {
 		log.Fatal(err)
 	}
-	log.Print(timescaleData)
 	ctx := context.Background()
-	_, err := d.conn.Exec(ctx, queryInsertMetaData, time.Unix(0, int64(timescaleData["time_received_ns"].(float64))).UTC(), timescaleData["sequence_num"],
+	/*
+		_, err := d.conn.Exec(ctx, queryInsertMetaData, time.Unix(0, int64(timescaleData["time_received_ns"].(float64))).UTC(), timescaleData["sequence_num"],
+			timescaleData["sampler_address"], time.Unix(0, int64(timescaleData["time_flow_start_ns"].(float64))).UTC(),
+			time.Unix(0, int64(timescaleData["time_flow_start_ns"].(float64))).UTC(),
+			timescaleData["bytes"], timescaleData["packets"], timescaleData["src_addr"], timescaleData["dst_addr"],
+			timescaleData["src_net"], timescaleData["etype"], timescaleData["proto"], timescaleData["src_port"],
+			timescaleData["dst_port"], timescaleData["in_if"], timescaleData["out_if"], timescaleData["ip_tos"],
+			timescaleData["forwarding_status"], timescaleData["tcp_flags"], timescaleData["dst_net"])
+	*/
+	_, err := d.pool.Exec(ctx, queryInsertMetaData, time.Unix(0, int64(timescaleData["time_received_ns"].(float64))).UTC(), timescaleData["sequence_num"],
 		timescaleData["sampler_address"], time.Unix(0, int64(timescaleData["time_flow_start_ns"].(float64))).UTC(),
 		time.Unix(0, int64(timescaleData["time_flow_start_ns"].(float64))).UTC(),
 		timescaleData["bytes"], timescaleData["packets"], timescaleData["src_addr"], timescaleData["dst_addr"],
@@ -73,12 +84,15 @@ func (d *TimeScaleDBDriver) Errors() <-chan error { return d.errors }
 
 func (d *TimeScaleDBDriver) Close() error {
 	ctx := context.Background()
-	defer func(conn *pgx.Conn, ctx context.Context) {
-		err := conn.Close(ctx)
-		if err != nil {
-			log.Fatalf("Unable to close connection: %v", err)
-		}
-	}(d.conn, ctx)
+	//defer func(conn *pgx.Conn, ctx context.Context) {
+	//	err := conn.Close(ctx)
+	//	if err != nil {
+	//		log.Fatalf("Unable to close connection: %v", err)
+	//	}
+	//}(d.conn, ctx)
+	defer func(pool *pgxpool.Pool, ctx context.Context) {
+		pool.Close()
+	}(d.pool, ctx)
 	return nil
 }
 
